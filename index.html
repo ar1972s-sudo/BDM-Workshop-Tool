@@ -884,12 +884,12 @@ function buildPresSlides(){
   const hi3=sorted.slice(0,3),lo3=sorted.slice(-3).reverse();
   presSlides=[
     ()=>presTitle(),
+    ()=>presFieber(),
     ...WS.participants.map(p=>()=>presCompass(p)),
     ()=>presCompassAll(),
     ...(state.dimensions.length?[()=>presDimensions()]:[]),
     ...(avg.some(r=>r.avg>0)?[()=>presRatings(avg),()=>presHiLo(hi3,lo3)]:[]),
     ...WS.noteBlocks.map(b=>()=>presNotes(b)),
-    ()=>presFieber(),
     ()=>presSummary(hi3,lo3),
   ];
   presSlide=0;
