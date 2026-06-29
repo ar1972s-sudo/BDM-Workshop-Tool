@@ -506,12 +506,12 @@ function renderRatingForm(p,d){
   if(!dims.length)return`<div style="color:#aeaeb2;font-size:14px;padding:1rem">Noch keine Dimensionen definiert.</div>`;
   const complete=isRatingComplete(d);
   return`<p style="font-size:13px;color:#6e6e73;margin-bottom:1rem">1 = sehr schwach · 3 = ok · 5 = sehr stark</p>`+
-    dims.map(dim=>`<div style="margin-bottom:14px">
+    dims.map((dim,i)=>`<div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;margin-bottom:5px">
         <span style="font-size:13px">${dim}</span>
-        <span id="dim-score-${dim.replace(/\s/g,'_')}" style="font-size:13px;font-weight:500;color:${(d.ratings?.[dim]||0)?p.color:"#aeaeb2"}">${d.ratings?.[dim]||"–"}</span>
+        <span id="dim-score-${i}" style="font-size:13px;font-weight:500;color:${(d.ratings?.[dim]||0)?p.color:"#aeaeb2"}">${d.ratings?.[dim]||"–"}</span>
       </div>
-      <div class="star-row rating-row-${dim.replace(/\s/g,'_')}">${[1,2,3,4,5].map(n=>`<button class="star-btn${d.ratings?.[dim]===n?" active":""}" data-val="${n}" style="${d.ratings?.[dim]===n?"background:"+p.color+";border-color:"+p.color+";color:#fff":""}" onclick="rateItem('${dim}',${n})">${n}</button>`).join("")}</div>
+      <div class="star-row" id="dim-row-${i}">${[1,2,3,4,5].map(n=>`<button class="star-btn${d.ratings?.[dim]===n?" active":""}" data-val="${n}" style="${d.ratings?.[dim]===n?"background:"+p.color+";border-color:"+p.color+";color:#fff":""}" onclick="rateItem(${i},${n})">${n}</button>`).join("")}</div>
     </div>`).join("")+
     `<button id="submit-btn" class="btn ${complete?"btn-primary":"btn-disabled"}" style="margin-top:1rem;${complete?"background:"+p.color:""}" onclick="${complete?"submitForm('rating')":""}">${complete?"Einreichen ✓":"Bitte alle "+dims.length+" Felder bewerten"}</button>`;
 }
@@ -532,19 +532,20 @@ function updateSubmitButton(formType,d){
   btn.textContent=complete?(formType==="checkin"?"Check-in einreichen ✓":"Einreichen ✓"):"Bitte alle "+(formType==="checkin"?WS.checkinFields:WS.compassFields).length+" Felder ausfüllen";
   btn.onclick=complete?()=>submitForm(formType):null;
 }
-function rateItem(dim,n){
+function rateItem(dimIndex,n){
   const d=state.participants[currentPid];if(!d)return;
   if(!d.ratings)d.ratings={};
+  const dim=state.dimensions[dimIndex];
+  if(!dim)return;
   d.ratings[dim]=n;
   fbSetParticipant(currentPid,d);
   const p=WS.participants.find(x=>x.id===currentPid);
-  const key=dim.replace(/\s/g,'_');
-  document.querySelectorAll(`.rating-row-${key} .star-btn`).forEach(btn=>{
+  document.querySelectorAll(`#dim-row-${dimIndex} .star-btn`).forEach(btn=>{
     const v=parseInt(btn.dataset.val);
     btn.classList.toggle("active",v===n);
     btn.style.background=v===n?p.color:"";btn.style.borderColor=v===n?p.color:"";btn.style.color=v===n?"#fff":"";
   });
-  const sc=document.getElementById("dim-score-"+key);
+  const sc=document.getElementById("dim-score-"+dimIndex);
   if(sc){sc.style.color=p.color;sc.textContent=n;}
   const complete=isRatingComplete(d);
   const btn=document.getElementById("submit-btn");
