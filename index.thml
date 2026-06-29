@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BDM Workshop Tool</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+textarea,input,button{font-family:inherit}
+textarea{outline:none;resize:vertical}
+input{outline:none}
+.screen{display:none;padding:1.5rem;max-width:520px;margin:0 auto}
+.screen.active{display:block}
+.screen-wide{display:none;padding:1.5rem;max-width:680px;margin:0 auto}
+.screen-wide.active{display:block}
+.screen-full{display:none;min-height:100vh;background:#0f1117;color:#fff;flex-direction:column}
+.screen-full.active{display:flex}
+.card{background:#fff;border:0.5px solid #e5e5ea;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:500}
+.btn{display:block;width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:10px;transition:opacity .2s}
+.btn-primary{background:#5B8AF5;color:#fff}
+.btn-secondary{background:transparent;border:0.5px solid #d2d2d7;color:#1d1d1f}
+.btn-disabled{background:#ebebed;color:#aeaeb2;cursor:default}
+.btn-green{background:#2EAE85;color:#fff}
+.btn-sm{width:auto;padding:8px 16px;font-size:13px;margin-bottom:0}
+.progress-bar{display:flex;gap:5px;margin-bottom:10px}
+.progress-seg{flex:1;height:4px;border-radius:4px}
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
+.participant-tile{background:#fff;border:0.5px solid #d2d2d7;border-radius:12px;padding:1rem;cursor:pointer}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
+.tab{padding:6px 10px;border-radius:8px;border:0.5px solid #d2d2d7;background:transparent;color:#6e6e73;font-size:11px;cursor:pointer}
+.tab.active{background:#5B8AF5;border-color:#5B8AF5;color:#fff}
+input[type=text]{width:100%;border-radius:8px;border:0.5px solid #d2d2d7;background:#fff;color:#1d1d1f;padding:10px 12px;font-size:14px}
+textarea{width:100%;border-radius:8px;border:0.5px solid #d2d2d7;background:#fff;color:#1d1d1f;padding:10px 12px;font-size:14px;min-height:60px}
+.field-label{font-size:13px;font-weight:500;color:#1d1d1f;margin-bottom:2px}
+.field-hint{font-size:12px;color:#6e6e73;margin-bottom:6px}
+.field-wrap{margin-bottom:16px}
+.star-row{display:flex;gap:6px}
+.star-btn{flex:1;height:36px;border-radius:8px;border:0.5px solid #d2d2d7;background:transparent;color:#6e6e73;font-size:13px;cursor:pointer}
+.bar-wrap{height:8px;background:#ebebed;border-radius:4px;margin-top:4px}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.dim-row{display:flex;align-items:center;gap:8px;background:#fff;border:0.5px solid #e5e5ea;border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.suggestion-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.suggestion-chip{padding:6px 12px;border-radius:20px;border:0.5px solid #d2d2d7;background:transparent;color:#6e6e73;font-size:12px;cursor:pointer}
+.pres-nav{background:#1a1d27;padding:1rem 2rem;display:flex;align-items:center;gap:16px}
+.pres-slide{flex:1;display:flex;flex-direction:column;justify-content:center;padding:2.5rem 3.5rem;min-height:460px}
+.pres-dot{height:8px;border-radius:4px;background:#333;cursor:pointer;transition:all .2s}
+.pin-display{display:flex;gap:10px;justify-content:center;margin-bottom:1rem}
+.pin-box{width:44px;height:52px;border-radius:10px;border:0.5px solid #d2d2d7;background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+.pin-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.pin-btn{height:52px;border-radius:10px;border:0.5px solid #d2d2d7;background:#fff;color:#1d1d1f;font-size:18px;cursor:pointer}
+.sync-ok{font-size:11px;color:#2EAE85;margin-top:6px}
+.sync-err{font-size:11px;color:#E24B4A;margin-top:6px}
+.sync-wait{font-size:11px;color:#E8A23A;margin-top:6px}
+pre{background:#fff;border:0.5px solid #e5e5ea;border-radius:10px;padding:1rem;font-size:12px;color:#6e6e73;white-space:pre-wrap;line-height:1.7}
+.back-btn{background:none;border:none;cursor:pointer;color:#6e6e73;font-size:18px;padding:0;margin-right:10px}
+/* Fieberkurve */
+.fever-section{background:#fff;border:0.5px solid #e5e5ea;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.fever-month-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid #f0f0f0}
+.fever-month-row:last-child{border-bottom:none}
+.fever-score-btns{display:flex;gap:4px}
+.fever-score-btn{width:32px;height:32px;border-radius:8px;border:0.5px solid #d2d2d7;background:transparent;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.fever-comment{flex:1;min-width:0}
+@media(max-width:480px){.pres-slide{padding:1.5rem}}
+</style>
+</head>
+<body>
+
+<div id="s-home" class="screen active">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem">
+    <div style="flex:1">
+      <h2 style="font-weight:500;font-size:20px;color:#1d1d1f">BDM Workshop</h2>
+      <p style="font-size:13px;color:#6e6e73;margin:0">Tag 1 – 02.07.</p>
+    </div>
+  </div>
+
+  <!-- Workshop Phase Block -->
+  <div class="card">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#aeaeb2;margin-bottom:6px">Aktive Phase</div>
+    <div id="home-phase-label" style="font-size:16px;font-weight:500;color:#1d1d1f;margin-bottom:2px"></div>
+    <div id="home-phase-desc" style="font-size:13px;color:#6e6e73;margin-bottom:12px"></div>
+    <div class="progress-bar" id="home-progress"></div>
+    <div id="home-sub-count" style="font-size:12px;color:#6e6e73"></div>
+    <div id="home-sync" class="sync-ok"></div>
+  </div>
+  <div id="home-tiles" class="tile-grid"></div>
+  <div id="home-note-blocks"></div>
+  <div id="home-waiting" style="display:none" class="card">
+    <div style="font-size:14px;color:#6e6e73" id="home-waiting-text"></div>
+  </div>
+  <button class="btn btn-primary" onclick="goModAuth()">Moderator-Ansicht →</button>
+  <button class="btn btn-secondary" onclick="startPres()">Präsentation starten</button>
+
+  <!-- Fieberkurve Block -->
+  <div style="margin-top:1.5rem">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#aeaeb2;margin-bottom:10px">Team-Fieberkurve</div>
+    <div class="fever-section">
+      <p style="font-size:13px;color:#6e6e73;margin-bottom:1rem">Wie hat sich die Zusammenarbeit entwickelt? Bewerte jeden Monat und hinterlasse einen Kommentar.</p>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:12px;color:#6e6e73;margin-bottom:4px">Dein Name</div>
+          <select id="fever-person-select" onchange="renderFeverInput()" style="width:100%;border-radius:8px;border:0.5px solid #d2d2d7;background:#fff;color:#1d1d1f;padding:8px 10px;font-size:14px">
+            <option value="">– auswählen –</option>
+            <option value="arjan">Arjan</option>
+            <option value="sabine">Sabine</option>
+            <option value="joerg">Jörg</option>
+            <option value="ralf">Ralf</option>
+          </select>
+        </div>
+      </div>
+      <div id="fever-input-area"></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-participant" class="screen">
+  <div style="display:flex;align-items:center;margin-bottom:1.25rem">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div id="p-avatar" class="avatar" style="margin-right:10px"></div>
+    <div>
+      <div id="p-name" style="font-weight:500;font-size:14px;color:#1d1d1f"></div>
+      <div class="sync-ok">● Live gespeichert</div>
+    </div>
+  </div>
+  <div id="p-tabs" class="tabs"></div>
+  <div id="p-content"></div>
+</div>
+
+<div id="s-notes" class="screen">
+  <div style="display:flex;align-items:center;margin-bottom:1.25rem">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <span id="notes-icon" style="font-size:20px;margin-right:10px"></span>
+    <div>
+      <div id="notes-label" style="font-weight:500;font-size:14px;color:#1d1d1f"></div>
+      <div id="notes-meta" style="font-size:12px;color:#6e6e73"></div>
+    </div>
+  </div>
+  <div id="notes-content"></div>
+</div>
+
+<div id="s-modauth" class="screen" style="max-width:340px;text-align:center;padding-top:3rem">
+  <div style="width:48px;height:48px;border-radius:50%;background:#5B8AF522;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:20px">🔒</div>
+  <h2 style="font-size:18px;margin-bottom:4px">Moderator-Zugang</h2>
+  <p style="font-size:13px;color:#6e6e73;margin-bottom:1.5rem">PIN eingeben</p>
+  <div class="pin-display" id="pin-display"></div>
+  <div id="pin-error" style="font-size:12px;color:#E24B4A;margin-bottom:10px;min-height:16px"></div>
+  <div class="pin-grid" id="pin-grid"></div>
+  <button onclick="goHome()" style="background:none;border:none;color:#6e6e73;font-size:13px;cursor:pointer">← Zurück</button>
+</div>
+
+<div id="s-moderator" class="screen-wide">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div style="flex:1">
+      <div style="font-weight:500;font-size:16px;color:#1d1d1f">Moderator · BDM Workshop</div>
+      <div class="sync-ok">● Firebase Live</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="startPres()">Präsentation →</button>
+  </div>
+  <div class="card">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#aeaeb2;margin-bottom:8px">Phasensteuerung</div>
+    <div id="mod-phases" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap"></div>
+    <div id="mod-phase-btn-wrap"></div>
+  </div>
+  <div class="tabs" id="mod-tabs"></div>
+  <div id="mod-content"></div>
+</div>
+
+<div id="s-pres" class="screen-full">
+  <div class="pres-slide" id="pres-slide"></div>
+  <div class="pres-nav">
+    <button onclick="setPresMode(false)" style="background:none;border:0.5px solid #333;color:#888;font-size:12px;padding:6px 12px;border-radius:6px;cursor:pointer">✕ ESC</button>
+    <div style="flex:1;display:flex;gap:4px;justify-content:center;flex-wrap:wrap" id="pres-dots"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="pres-prev" onclick="presNav(-1)" style="padding:8px 16px;border-radius:8px;border:0.5px solid #333;background:transparent;color:#fff;font-size:14px;cursor:pointer">←</button>
+      <span id="pres-counter" style="font-size:12px;color:#555"></span>
+      <button id="pres-next" onclick="presNav(1)" style="padding:8px 16px;border-radius:8px;border:0.5px solid #333;background:transparent;color:#fff;font-size:14px;cursor:pointer">→</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── FIREBASE ─────────────────────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyBzrCIAFQuuI_6iBn640CTUb2HE5OQNP24",
+  authDomain:"doctari-workshop.firebaseapp.com",
+  databaseURL:"https://doctari-workshop-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"doctari-workshop",
+  storageBucket:"doctari-workshop.firebasestorage.app",
+  messagingSenderId:"894998686604",
+  appId:"1:894998686604:web:5e124e538228fa947c44a9"
+});
+const db = firebase.database();
+const PFX = "workshops/bdm";
+const MOD_PIN = "2611";
+
+// ─── WORKSHOP CONFIG ──────────────────────────────────────────────────────────
+const WS = {
+  participants:[
+    {id:"arjan",name:"Arjan",role:"CSO / Moderation",color:"#B06AE0"},
+    {id:"sabine",name:"Sabine",role:"BDM",color:"#5B8AF5"},
+    {id:"joerg",name:"Jörg",role:"BDM",color:"#2EAE85"},
+    {id:"ralf",name:"Ralf",role:"BDM",color:"#E8A23A"},
+  ],
+  compassFields:[
+    {field:"motiviert",label:"Was motiviert mich?",hint:"Was treibt dich an – im Job, in diesem Team?"},
+    {field:"zieleSelbst",label:"Meine persönlichen Ziele",hint:"Was willst du für dich selbst erreichen?"},
+    {field:"zieleDoctari",label:"Meine Ziele für doctari",hint:"Was willst du für das Unternehmen erreichen?"},
+    {field:"wieErreichen",label:"Mein Weg dahin",hint:"Wie gehst du vor? Was sind deine Mittel?"},
+    {field:"teamBrauche",label:"Was ich vom Team brauche",hint:"Was brauchst du von den anderen?"},
+    {field:"wasBremst",label:"Was mich bremst",hint:"Was hält dich zurück?"},
+  ],
+  checkinFields:[
+    {field:"erwartung",label:"Meine Erwartung an heute",hint:"Was soll am Ende des Tages erreicht sein?"},
+    {field:"energie",label:"Mein Energielevel",hint:"Wie komme ich an – was nehme ich mit?"},
+    {field:"nogos",label:"Meine No-Gos für heute",hint:"Was soll heute NICHT passieren?"},
+  ],
+  noteBlocks:[
+    {id:"markt",label:"Markt & Rechtslage",icon:"⚖️",moderator:"Sabine",time:"12:45–13:30"},
+    {id:"pricing",label:"Pricing & Guardrails",icon:"💰",moderator:"Jörg & Ralf",time:"15:15–16:15"},
+    {id:"mvps",label:"Angebotsarchitektur MV/PS",icon:"📋",moderator:"Tobias Eisele",time:"16:15–17:00"},
+    {id:"review",label:"Tages-Review & Team-Deals",icon:"🎯",moderator:"Zusammen",time:"17:00–17:30"},
+  ],
+  phases:[
+    {id:"checkin",label:"Check-in",desc:"Erwartungen & Energielevel"},
+    {id:"compass",label:"Mein Kompass",desc:"Individuelle Eingaben"},
+    {id:"dimensions",label:"Zusammenarbeit",desc:"Wie arbeiten wir zusammen?"},
+    {id:"rating",label:"Einschätzung",desc:"Ehrliche Bewertung 1–5"},
+    {id:"notizen",label:"Notizen",desc:"Live-Mitschrift der Sessions"},
+    {id:"done",label:"Abgeschlossen",desc:""},
+  ],
+};
+
+// Last 12 months
+function getLast12Months(){
+  const months=[];
+  const now=new Date();
+  for(let i=11;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const key=d.getFullYear()+"-"+(d.getMonth()+1).toString().padStart(2,"0");
+    const label=d.toLocaleDateString("de-DE",{month:"short",year:"numeric"});
+    months.push({key,label});
+  }
+  return months;
+}
+const MONTHS = getLast12Months();
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state={
+  phase: WS.phases[0].id,
+  dimensions:[],
+  notes:{},
+  participants: Object.fromEntries(WS.participants.map(p=>[p.id,{
+    checkin:Object.fromEntries(WS.checkinFields.map(f=>[f.field,""])),
+    compass:Object.fromEntries(WS.compassFields.map(f=>[f.field,""])),
+    ratings:{},
+    submittedCheckin:false,submittedCompass:false,submittedRating:false
+  }])),
+  fever: {} // {monthKey: {pid: {score, comment}}}
+};
+let currentScreen="s-home";
+let modTab="overview";
+let presSlide=0,presSlides=[];
+let pinInput="",pinAttempts=0;
+let summaries={};
+const debounceTimers={};
+
+// ─── FIREBASE ─────────────────────────────────────────────────────────────────
+function fbSet(path,val){return db.ref(PFX+"/"+path).set(val);}
+function fbSetParticipant(pid,data){
+  state.participants[pid]=data;
+  clearTimeout(debounceTimers[pid]);
+  debounceTimers[pid]=setTimeout(()=>fbSet("participant_"+pid,data),800);
+}
+function fbSetFever(monthKey,pid,score,comment){
+  if(!state.fever[monthKey])state.fever[monthKey]={};
+  state.fever[monthKey][pid]={score,comment};
+  clearTimeout(debounceTimers["fever_"+monthKey+"_"+pid]);
+  debounceTimers["fever_"+monthKey+"_"+pid]=setTimeout(()=>{
+    fbSet("fever/"+monthKey+"/"+pid,{score,comment});
+  },800);
+}
+
+// Live listener
+db.ref(PFX).on("value",snap=>{
+  const v=snap.val()||{};
+  state.phase=v.phase||WS.phases[0].id;
+  state.dimensions=v.dimensions||[];
+  state.notes=v.notes||{};
+  state.fever=v.fever||{};
+  WS.participants.forEach(pt=>{
+    if(!debounceTimers[pt.id]){
+      state.participants[pt.id]=v["participant_"+pt.id]||state.participants[pt.id];
+    }
+  });
+  setSync("ok");
+  if(currentScreen!=="s-participant"&&currentScreen!=="s-notes"){
+    refreshCurrentScreen();
+  }
+},()=>setSync("err"));
+
+function resetAll(){
+  const fresh={
+    phase:WS.phases[0].id,dimensions:[],notes:{},fever:{},
+    ...Object.fromEntries(WS.participants.map(p=>["participant_"+p.id,{
+      checkin:Object.fromEntries(WS.checkinFields.map(f=>[f.field,""])),
+      compass:Object.fromEntries(WS.compassFields.map(f=>[f.field,""])),
+      ratings:{},submittedCheckin:false,submittedCompass:false,submittedRating:false
+    }]))
+  };
+  db.ref(PFX).set(fresh);
+  summaries={};
+}
+
+// ─── SYNC ─────────────────────────────────────────────────────────────────────
+function setSync(s){
+  const el=document.getElementById("home-sync");
+  if(!el)return;
+  if(s==="ok"){el.className="sync-ok";el.textContent="● Firebase Live";}
+  else if(s==="err"){el.className="sync-err";el.textContent="● Verbindungsfehler";}
+  else{el.className="sync-wait";el.textContent="● Verbinde...";}
+}
+setSync("wait");
+
+// ─── ROUTING ──────────────────────────────────────────────────────────────────
+function show(id){
+  document.querySelectorAll(".screen,.screen-wide,.screen-full").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  currentScreen=id;
+}
+function goHome(){show("s-home");renderHome();}
+function goModAuth(){show("s-modauth");renderPinPad();}
+function showMod(){show("s-moderator");renderMod();}
+function startPres(){buildPresSlides();show("s-pres");renderPresSlide();}
+function setPresMode(on){if(on)startPres();else goHome();}
+function refreshCurrentScreen(){
+  if(currentScreen==="s-home")renderHome();
+  else if(currentScreen==="s-moderator")renderMod();
+  else if(currentScreen==="s-participant")renderParticipant();
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+function renderHome(){
+  const phaseIdx=WS.phases.findIndex(p=>p.id===state.phase);
+  const phaseObj=WS.phases[phaseIdx]||WS.phases[0];
+  document.getElementById("home-phase-label").textContent=phaseObj.label;
+  document.getElementById("home-phase-desc").textContent=phaseObj.desc;
+  const prog=document.getElementById("home-progress");
+  const nodone=WS.phases.filter(p=>p.id!=="done");
+  prog.innerHTML=nodone.map((p,i)=>`<div class="progress-seg" style="background:${phaseIdx>i?"#2EAE85":phaseIdx===i?"#5B8AF5":"#ebebed"}"></div>`).join("");
+  const subKey=state.phase==="checkin"?"submittedCheckin":state.phase==="compass"?"submittedCompass":state.phase==="rating"?"submittedRating":null;
+  const sc=document.getElementById("home-sub-count");
+  if(subKey){const cnt=WS.participants.filter(p=>state.participants[p.id]?.[subKey]).length;sc.textContent=cnt+"/"+WS.participants.length+" eingereicht"+(cnt===WS.participants.length?" ✓":"");}
+  else sc.textContent="";
+  const inputPhases=["checkin","compass","rating"];
+  const tiles=document.getElementById("home-tiles");
+  if(inputPhases.includes(state.phase)){
+    tiles.style.display="grid";
+    tiles.innerHTML=WS.participants.map(p=>{
+      const d=state.participants[p.id]||{};
+      const sub=subKey?d[subKey]:false;
+      const complete=state.phase==="checkin"?isCheckinComplete(d):state.phase==="compass"?isCompassComplete(d):isRatingComplete(d);
+      return`<div class="participant-tile" style="border-color:${sub?p.color+"66":"#d2d2d7"}" onclick="goParticipant('${p.id}')">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div class="avatar" style="background:${p.color}22;color:${p.color}">${p.name[0]}</div>
+          <div><div style="font-weight:500;font-size:14px">${p.name}</div><div style="font-size:11px;color:#6e6e73">${p.role}</div></div>
+        </div>
+        <span class="badge" style="background:${sub?"#2EAE8520":complete?"#E8A23A20":"#ebebed"};color:${sub?"#2EAE85":complete?"#E8A23A":"#aeaeb2"}">${sub?"✓ Eingereicht":complete?"Bereit":"Offen"}</span>
+      </div>`;
+    }).join("");
+  } else tiles.style.display="none";
+  const nb=document.getElementById("home-note-blocks");
+  if(state.phase==="notizen"){
+    nb.innerHTML=WS.noteBlocks.map(b=>`<div class="card" style="cursor:pointer;display:flex;align-items:center;gap:12px" onclick="goNotes('${b.id}')">
+      <span style="font-size:20px">${b.icon}</span>
+      <div style="flex:1"><div style="font-weight:500;font-size:14px">${b.label}</div><div style="font-size:12px;color:#6e6e73">${b.time} · ${b.moderator}</div></div>
+      <span style="color:#aeaeb2">›</span>
+    </div>`).join("");
+  } else nb.innerHTML="";
+  const w=document.getElementById("home-waiting");
+  if(state.phase==="dimensions"){w.style.display="block";document.getElementById("home-waiting-text").textContent="Moderator sammelt die Dimensionen.";}
+  else w.style.display="none";
+}
+
+// ─── FEVER CURVE ──────────────────────────────────────────────────────────────
+function renderFeverInput(){
+  const pid=document.getElementById("fever-person-select").value;
+  const el=document.getElementById("fever-input-area");
+  if(!pid){el.innerHTML="";return;}
+  const p=WS.participants.find(x=>x.id===pid);
+  const fever=state.fever||{};
+  el.innerHTML=`
+    <div style="font-size:12px;font-weight:500;color:${p.color};margin-bottom:10px">${p.name} – Monatsbewertungen</div>
+    <div style="font-size:11px;color:#aeaeb2;margin-bottom:8px;display:flex;gap:8px">
+      <span style="width:80px"></span>
+      <span style="flex:0 0 auto;width:180px;text-align:center">Bewertung (–3 bis +3)</span>
+      <span>Kommentar</span>
+    </div>
+    ${MONTHS.map(m=>{
+      const entry=(fever[m.key]||{})[pid]||{score:null,comment:""};
+      const score=entry.score;
+      return`<div class="fever-month-row">
+        <span style="font-size:12px;color:#6e6e73;width:80px;flex-shrink:0">${m.label}</span>
+        <div class="fever-score-btns" style="flex-shrink:0">
+          ${[-3,-2,-1,0,1,2,3].map(n=>{
+            const col=n<0?"#E24B4A":n>0?"#2EAE85":"#aeaeb2";
+            const active=score===n;
+            return`<button class="fever-score-btn" 
+              style="background:${active?col:"transparent"};border-color:${active?col:"#d2d2d7"};color:${active?"#fff":col};font-weight:${active?"600":"400"}"
+              onclick="setFeverScore('${m.key}','${pid}',${n})">${n>0?"+"+n:n}</button>`;
+          }).join("")}
+        </div>
+        <input type="text" class="fever-comment" id="fever-comment-${m.key}-${pid}" 
+          placeholder="Was war los?" value="${(entry.comment||"").replace(/"/g,'&quot;')}"
+          oninput="setFeverComment('${m.key}','${pid}',this.value)"
+          style="font-size:12px;padding:6px 8px;border-radius:6px;border:0.5px solid #e5e5ea;background:#f9f9f9;min-width:0">
+      </div>`;
+    }).join("")}`;
+}
+
+function setFeverScore(monthKey,pid,score){
+  const commentEl=document.getElementById("fever-comment-"+monthKey+"-"+pid);
+  const comment=commentEl?commentEl.value:"";
+  fbSetFever(monthKey,pid,score,comment);
+  renderFeverInput(); // re-render to update button colors
+}
+function setFeverComment(monthKey,pid,comment){
+  const current=(state.fever[monthKey]||{})[pid]||{};
+  fbSetFever(monthKey,pid,current.score??null,comment);
+}
+
+// ─── PARTICIPANT ──────────────────────────────────────────────────────────────
+let currentPid=null,currentPTab=null;
+function goParticipant(pid){currentPid=pid;currentPTab=state.phase==="rating"?"rating":state.phase==="checkin"?"checkin":"compass";show("s-participant");renderParticipant();}
+function goNotes(blockId){const block=WS.noteBlocks.find(b=>b.id===blockId);if(!block)return;show("s-notes");renderNotesInput(block);}
+
+function renderParticipant(){
+  if(!currentPid)return;
+  const p=WS.participants.find(x=>x.id===currentPid);
+  if(!p)return;
+  const d=state.participants[currentPid]||{};
+  document.getElementById("p-avatar").style.cssText=`margin-right:10px;background:${p.color}22;color:${p.color}`;
+  document.getElementById("p-avatar").textContent=p.name[0];
+  document.getElementById("p-name").textContent=p.name+" · "+p.role;
+  const subKey=state.phase==="checkin"?"submittedCheckin":state.phase==="compass"?"submittedCompass":state.phase==="rating"?"submittedRating":null;
+  if(subKey&&d[subKey]){
+    document.getElementById("p-tabs").innerHTML="";
+    document.getElementById("p-content").innerHTML=`<div style="text-align:center;padding:3rem 1rem">
+      <div style="width:56px;height:56px;border-radius:50%;background:#2EAE8522;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:24px">✓</div>
+      <h2 style="margin-bottom:8px">Eingereicht!</h2>
+      <p style="color:#6e6e73;font-size:14px;margin-bottom:1.5rem">Gespeichert. Warte auf den Moderator.</p>
+      <button class="btn btn-secondary" onclick="goHome()" style="width:auto;padding:10px 24px">← Zurück</button>
+    </div>`;
+    return;
+  }
+  if(["dimensions","notizen","done"].includes(state.phase)){
+    document.getElementById("p-tabs").innerHTML="";
+    document.getElementById("p-content").innerHTML=`<div style="text-align:center;padding:3rem 1rem">
+      <div style="font-size:32px;margin-bottom:1rem">${state.phase==="done"?"🎯":"💬"}</div>
+      <h2 style="margin-bottom:8px">${state.phase==="done"?"Workshop abgeschlossen":"Warte auf Moderator"}</h2>
+      <button class="btn btn-secondary" onclick="goHome()" style="margin-top:1.5rem;width:auto;padding:10px 24px">← Zurück</button>
+    </div>`;
+    return;
+  }
+  let tabs=state.phase==="rating"?["checkin","compass","rating"]:state.phase==="compass"?["checkin","compass"]:["checkin"];
+  if(!tabs.includes(currentPTab))currentPTab=tabs[0];
+  document.getElementById("p-tabs").innerHTML=tabs.length>1?tabs.map(t=>`
+    <button class="tab${currentPTab===t?" active":""}" onclick="setPTab('${t}')" style="${currentPTab===t?"border-color:"+p.color+";background:"+p.color+"18;color:"+p.color:""}">
+      ${t==="checkin"?(d.submittedCheckin?"✓ Check-in":"Check-in"):t==="compass"?(d.submittedCompass?"✓ Kompass":"Mein Kompass"):"Einschätzung"}
+    </button>`).join(""):"";
+  renderPContent(p,d);
+}
+function setPTab(t){currentPTab=t;renderParticipant();}
+
+function renderPContent(p,d){
+  const el=document.getElementById("p-content");
+  if(currentPTab==="checkin"){
+    if(d.submittedCheckin){el.innerHTML=renderReadonly(WS.checkinFields,d.checkin||{},p.color);return;}
+    el.innerHTML=renderForm(WS.checkinFields,d.checkin||{},p.color,"checkin","Check-in einreichen ✓");
+  } else if(currentPTab==="compass"){
+    if(d.submittedCompass){el.innerHTML=renderReadonly(WS.compassFields,d.compass||{},p.color);return;}
+    el.innerHTML=renderForm(WS.compassFields,d.compass||{},p.color,"compass","Einreichen ✓");
+  } else if(currentPTab==="rating"){
+    el.innerHTML=renderRatingForm(p,d);
+  }
+}
+
+function renderForm(fields,values,color,formType,btnLabel){
+  const complete=fields.every(f=>values[f.field]?.trim().length>0);
+  return fields.map(f=>`<div class="field-wrap">
+    <div class="field-label">${f.label}</div>
+    <div class="field-hint">${f.hint}</div>
+    <textarea oninput="updateField('${formType}','${f.field}',this.value)" placeholder="...">${values[f.field]||""}</textarea>
+  </div>`).join("")+
+  `<button id="submit-btn" class="btn ${complete?"btn-primary":"btn-disabled"}" style="${complete?"background:"+color:""}" onclick="${complete?"submitForm('"+formType+"')":""}">${complete?btnLabel:"Bitte alle "+fields.length+" Felder ausfüllen"}</button>`;
+}
+function renderReadonly(fields,values,color){
+  return`<div class="card">${fields.map(f=>`<div style="margin-bottom:10px"><div style="font-size:11px;color:${color};font-weight:500">${f.label}</div><div style="font-size:13px">${values[f.field]||"–"}</div></div>`).join("")}</div>`;
+}
+function renderRatingForm(p,d){
+  const dims=state.dimensions;
+  if(!dims.length)return`<div style="color:#aeaeb2;font-size:14px;padding:1rem">Noch keine Dimensionen definiert.</div>`;
+  const complete=isRatingComplete(d);
+  return`<p style="font-size:13px;color:#6e6e73;margin-bottom:1rem">1 = sehr schwach · 3 = ok · 5 = sehr stark</p>`+
+    dims.map((dim,i)=>`<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:13px">${dim}</span>
+        <span id="dim-score-${i}" style="font-size:13px;font-weight:500;color:${(d.ratings?.[dim]||0)?p.color:"#aeaeb2"}">${d.ratings?.[dim]||"–"}</span>
+      </div>
+      <div class="star-row" id="dim-row-${i}">${[1,2,3,4,5].map(n=>`<button class="star-btn${d.ratings?.[dim]===n?" active":""}" data-val="${n}" style="${d.ratings?.[dim]===n?"background:"+p.color+";border-color:"+p.color+";color:#fff":""}" onclick="rateItem(${i},${n})">${n}</button>`).join("")}</div>
+    </div>`).join("")+
+    `<button id="submit-btn" class="btn ${complete?"btn-primary":"btn-disabled"}" style="margin-top:1rem;${complete?"background:"+p.color:""}" onclick="${complete?"submitForm('rating')":""}">${complete?"Einreichen ✓":"Bitte alle "+dims.length+" Felder bewerten"}</button>`;
+}
+
+function updateField(formType,field,val){
+  const d=state.participants[currentPid];if(!d)return;
+  if(formType==="checkin")d.checkin[field]=val;
+  else if(formType==="compass")d.compass[field]=val;
+  fbSetParticipant(currentPid,d);
+  updateSubmitButton(formType,d);
+}
+function updateSubmitButton(formType,d){
+  const btn=document.getElementById("submit-btn");if(!btn)return;
+  const complete=formType==="checkin"?isCheckinComplete(d):isCompassComplete(d);
+  const p=WS.participants.find(x=>x.id===currentPid);
+  btn.className="btn "+(complete?"btn-primary":"btn-disabled");
+  btn.style.background=complete?p.color:"";
+  btn.textContent=complete?(formType==="checkin"?"Check-in einreichen ✓":"Einreichen ✓"):"Bitte alle "+(formType==="checkin"?WS.checkinFields:WS.compassFields).length+" Felder ausfüllen";
+  btn.onclick=complete?()=>submitForm(formType):null;
+}
+function rateItem(dimIndex,n){
+  const d=state.participants[currentPid];if(!d)return;
+  if(!d.ratings)d.ratings={};
+  const dim=state.dimensions[dimIndex];
+  if(!dim)return;
+  d.ratings[dim]=n;
+  fbSetParticipant(currentPid,d);
+  const p=WS.participants.find(x=>x.id===currentPid);
+  document.querySelectorAll(`#dim-row-${dimIndex} .star-btn`).forEach(btn=>{
+    const v=parseInt(btn.dataset.val);
+    btn.classList.toggle("active",v===n);
+    btn.style.background=v===n?p.color:"";btn.style.borderColor=v===n?p.color:"";btn.style.color=v===n?"#fff":"";
+  });
+  const sc=document.getElementById("dim-score-"+dimIndex);
+  if(sc){sc.style.color=p.color;sc.textContent=n;}
+  const complete=isRatingComplete(d);
+  const btn=document.getElementById("submit-btn");
+  if(btn){btn.className="btn "+(complete?"btn-primary":"btn-disabled");btn.style.background=complete?p.color:"";btn.textContent=complete?"Einreichen ✓":"Bitte alle "+state.dimensions.length+" Felder bewerten";btn.onclick=complete?()=>submitForm("rating"):null;}
+}
+function submitForm(formType){
+  const d=state.participants[currentPid];if(!d)return;
+  if(formType==="checkin")d.submittedCheckin=true;
+  else if(formType==="compass")d.submittedCompass=true;
+  else if(formType==="rating")d.submittedRating=true;
+  fbSetParticipant(currentPid,d);
+  renderParticipant();
+}
+
+// ─── NOTES ────────────────────────────────────────────────────────────────────
+function renderNotesInput(block){
+  document.getElementById("notes-icon").textContent=block.icon;
+  document.getElementById("notes-label").textContent=block.label;
+  document.getElementById("notes-meta").textContent=block.time+" · "+block.moderator;
+  const bn=(state.notes||{})[block.id]||{};
+  document.getElementById("notes-content").innerHTML=WS.participants.map(p=>`
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:500;color:${p.color};margin-bottom:6px">${p.name}</div>
+      <textarea oninput="updateNote('${block.id}','${p.id}',this.value)" placeholder="${p.name}s Notizen...">${bn[p.id]||""}</textarea>
+    </div>`).join("");
+}
+function updateNote(blockId,pid,val){
+  if(!state.notes[blockId])state.notes[blockId]={};
+  state.notes[blockId][pid]=val;
+  clearTimeout(debounceTimers["note_"+blockId+"_"+pid]);
+  debounceTimers["note_"+blockId+"_"+pid]=setTimeout(()=>fbSet("notes/"+blockId+"/"+pid,val),800);
+}
+
+// ─── PIN ──────────────────────────────────────────────────────────────────────
+function renderPinPad(){
+  pinInput="";pinAttempts=0;
+  document.getElementById("pin-error").textContent="";
+  renderPinDisplay();
+  document.getElementById("pin-grid").innerHTML=[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map(k=>`<button class="pin-btn" ${k===""?"disabled style='opacity:0'":""} onclick="pressPin('${k}')">${k}</button>`).join("");
+}
+function renderPinDisplay(){document.getElementById("pin-display").innerHTML=[0,1,2,3].map(i=>`<div class="pin-box">${pinInput[i]?"●":""}</div>`).join("");}
+function pressPin(k){
+  if(k==="⌫"){pinInput=pinInput.slice(0,-1);renderPinDisplay();document.getElementById("pin-error").textContent="";return;}
+  if(pinInput.length>=4)return;
+  pinInput+=k;renderPinDisplay();
+  if(pinInput.length===4)setTimeout(checkPin,120);
+}
+function checkPin(){
+  if(pinInput===MOD_PIN){showMod();return;}
+  pinAttempts++;document.getElementById("pin-error").textContent="Falsche PIN · "+pinAttempts+"/5";
+  pinInput="";renderPinDisplay();
+  if(pinAttempts>=5)document.getElementById("pin-grid").innerHTML="<div style='color:#E24B4A;font-size:13px;padding:1rem'>Zu viele Fehlversuche.</div>";
+}
+
+// ─── MODERATOR ────────────────────────────────────────────────────────────────
+function renderMod(){
+  renderModPhases();renderModTabs();renderModContent();
+}
+function renderModPhases(){
+  const phaseIdx=WS.phases.findIndex(p=>p.id===state.phase);
+  document.getElementById("mod-phases").innerHTML=WS.phases.map((p,i)=>{
+    const st=i<phaseIdx?"done":i===phaseIdx?"active":"locked";
+    return`<div style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:0.5px solid ${st==="active"?"#5B8AF5":st==="done"?"#2EAE8544":"#d2d2d7"};background:${st==="active"?"#5B8AF512":st==="done"?"#2EAE8512":"transparent"};text-align:center">
+      <div style="font-size:10px;color:${st==="active"?"#5B8AF5":st==="done"?"#2EAE85":"#aeaeb2"};font-weight:500">${st==="done"?"✓ ":""}${p.label}</div>
+    </div>`;
+  }).join("");
+  const nextPhase=WS.phases[WS.phases.findIndex(p=>p.id===state.phase)+1];
+  const w=document.getElementById("mod-phase-btn-wrap");
+  if(!nextPhase){w.innerHTML="";return;}
+  if(nextPhase.id==="done"){w.innerHTML=`<button class="btn btn-green" onclick="advancePhase()">Workshop abschließen ✓</button>`;return;}
+  const canAdvance=nextPhase.id==="rating"?state.dimensions.length>=3:true;
+  w.innerHTML=`<button class="btn ${canAdvance?"btn-primary":"btn-disabled"}" onclick="${canAdvance?"advancePhase()":""}">${nextPhase.label} freigeben →</button>`;
+}
+function advancePhase(){
+  const idx=WS.phases.findIndex(p=>p.id===state.phase);
+  const next=WS.phases[idx+1];
+  if(next){state.phase=next.id;fbSet("phase",next.id);}
+}
+function renderModTabs(){
+  const tabs=["overview","compass","dimensions","rating","hilos","notizen","fieber","export"];
+  const labels={overview:"Übersicht",compass:"Kompass",dimensions:"Dimensionen",rating:"Bewertung",hilos:"Stark/Schwach",notizen:"Notizen",fieber:"Fieberkurve",export:"Export"};
+  document.getElementById("mod-tabs").innerHTML=tabs.map(t=>`<button class="tab${modTab===t?" active":""}" onclick="setModTab('${t}')">${labels[t]}</button>`).join("");
+}
+function setModTab(t){modTab=t;renderMod();}
+function renderModContent(){
+  const el=document.getElementById("mod-content");
+  const avg=getAvgRatings();
+  const sorted=[...avg].sort((a,b)=>b.avg-a.avg);
+  const hi3=sorted.slice(0,3),lo3=sorted.slice(-3).reverse();
+  if(modTab==="overview")el.innerHTML=renderModOverview(hi3,lo3);
+  else if(modTab==="compass")el.innerHTML=renderModCompass();
+  else if(modTab==="dimensions")el.innerHTML=renderModDimensions();
+  else if(modTab==="rating")el.innerHTML=renderModRating(avg);
+  else if(modTab==="hilos")el.innerHTML=renderModHiLo(hi3,lo3);
+  else if(modTab==="notizen")el.innerHTML=renderModNotizen();
+  else if(modTab==="fieber"){el.innerHTML=renderModFieber();drawFieberChart();}
+  else if(modTab==="export")el.innerHTML=renderModExport(avg,hi3,lo3);
+}
+
+// ─── FIEBER MODERATOR VIEW ────────────────────────────────────────────────────
+function renderModFieber(){
+  const fever=state.fever||{};
+  const tableRows=MONTHS.map(m=>{
+    const entries=fever[m.key]||{};
+    return`<tr>
+      <td style="font-size:12px;color:#6e6e73;padding:6px 8px;white-space:nowrap">${m.label}</td>
+      ${WS.participants.map(p=>{
+        const e=entries[p.id]||{};
+        const s=e.score;
+        const col=s==null?"#aeaeb2":s<0?"#E24B4A":s>0?"#2EAE85":"#6e6e73";
+        return`<td style="text-align:center;padding:6px 8px">
+          <span style="font-size:13px;font-weight:600;color:${col}">${s==null?"–":s>0?"+"+s:s}</span>
+          ${e.comment?`<div style="font-size:10px;color:#aeaeb2;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.comment}</div>`:""}
+        </td>`;
+      }).join("")}
+    </tr>`;
+  }).join("");
+  return`<canvas id="fieber-canvas" style="width:100%;max-height:280px;margin-bottom:1.5rem"></canvas>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr>
+            <th style="font-size:11px;color:#aeaeb2;text-align:left;padding:6px 8px;font-weight:500">Monat</th>
+            ${WS.participants.map(p=>`<th style="font-size:11px;color:${p.color};text-align:center;padding:6px 8px;font-weight:500">${p.name}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function drawFieberChart(){
+  const canvas=document.getElementById("fieber-canvas");
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||600;
+  const H=280;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+"px";canvas.style.height=H+"px";
+  const ctx=canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  const fever=state.fever||{};
+  const pad={top:20,right:20,bottom:40,left:40};
+  const cw=W-pad.left-pad.right;
+  const ch=H-pad.top-pad.bottom;
+  const n=MONTHS.length;
+  // grid
+  ctx.strokeStyle="#e5e5ea";ctx.lineWidth=0.5;
+  [-3,-2,-1,0,1,2,3].forEach(v=>{
+    const y=pad.top+ch*(1-(v+3)/6);
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cw,y);ctx.stroke();
+    ctx.fillStyle=v===0?"#aeaeb2":"#d2d2d7";ctx.font="10px -apple-system,sans-serif";
+    ctx.textAlign="right";ctx.fillText(v>0?"+"+v:v,pad.left-6,y+3);
+  });
+  // zero line bold
+  const y0=pad.top+ch*(1-3/6);
+  ctx.strokeStyle="#d2d2d7";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.left,y0);ctx.lineTo(pad.left+cw,y0);ctx.stroke();
+  // x labels
+  ctx.fillStyle="#aeaeb2";ctx.font="9px -apple-system,sans-serif";ctx.textAlign="center";
+  MONTHS.forEach((m,i)=>{
+    const x=pad.left+i*(cw/(n-1));
+    ctx.fillText(m.label.split(" ")[0],x,H-pad.bottom+14);
+  });
+  // lines per participant
+  WS.participants.forEach(p=>{
+    const points=MONTHS.map((m,i)=>{
+      const e=(fever[m.key]||{})[p.id];
+      if(!e||e.score==null)return null;
+      return{x:pad.left+i*(cw/(n-1)),y:pad.top+ch*(1-(e.score+3)/6)};
+    });
+    // draw line segments between non-null points
+    ctx.strokeStyle=p.color;ctx.lineWidth=2;ctx.lineJoin="round";
+    let drawing=false;
+    points.forEach(pt=>{
+      if(!pt){drawing=false;return;}
+      if(!drawing){ctx.beginPath();ctx.moveTo(pt.x,pt.y);drawing=true;}
+      else ctx.lineTo(pt.x,pt.y);
+    });
+    ctx.stroke();
+    // dots
+    points.forEach(pt=>{
+      if(!pt)return;
+      ctx.beginPath();ctx.arc(pt.x,pt.y,4,0,Math.PI*2);
+      ctx.fillStyle=p.color;ctx.fill();
+      ctx.strokeStyle="#fff";ctx.lineWidth=1.5;ctx.stroke();
+    });
+  });
+  // legend
+  let lx=pad.left;
+  WS.participants.forEach(p=>{
+    ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(lx+5,H-6,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#6e6e73";ctx.font="10px -apple-system,sans-serif";ctx.textAlign="left";
+    ctx.fillText(p.name,lx+12,H-3);
+    lx+=60;
+  });
+}
+
+// ─── MOD TABS RENDER ──────────────────────────────────────────────────────────
+function getAvgRatings(){
+  return state.dimensions.map(dim=>{
+    const vals=WS.participants.map(p=>state.participants[p.id]?.ratings?.[dim]||0).filter(v=>v>0);
+    return{dim,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0};
+  });
+}
+function renderModOverview(hi3,lo3){
+  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    ${WS.participants.map(p=>{const d=state.participants[p.id]||{};return`
+      <div class="card" style="border-left:3px solid ${p.color}">
+        <div style="font-weight:500;color:${p.color};margin-bottom:6px">${p.name} · ${p.role}</div>
+        <div style="font-size:12px;color:#6e6e73;margin-bottom:3px">Check-in: <span style="color:${d.submittedCheckin?"#2EAE85":"#aeaeb2"}">${d.submittedCheckin?"✓":"offen"}</span></div>
+        <div style="font-size:12px;color:#6e6e73;margin-bottom:3px">Kompass: <span style="color:${d.submittedCompass?"#2EAE85":"#aeaeb2"}">${d.submittedCompass?"✓":"offen"}</span></div>
+        <div style="font-size:12px;color:#6e6e73">Bewertung: <span style="color:${d.submittedRating?"#2EAE85":"#aeaeb2"}">${d.submittedRating?"✓":"offen"}</span></div>
+      </div>`}).join("")}
+    ${hi3.length?`<div class="card" style="grid-column:1/-1;display:flex;gap:16px;flex-wrap:wrap">
+      <div style="flex:1"><div style="font-size:11px;color:#2EAE85;font-weight:500;margin-bottom:6px">↑ Top 3</div>${hi3.map(({dim,avg})=>`<div style="font-size:12px;color:#6e6e73;margin-bottom:2px">${dim} · ${avg.toFixed(1)}</div>`).join("")}</div>
+      <div style="flex:1"><div style="font-size:11px;color:#E24B4A;font-weight:500;margin-bottom:6px">↓ Entwicklung</div>${lo3.map(({dim,avg})=>`<div style="font-size:12px;color:#6e6e73;margin-bottom:2px">${dim} · ${avg.toFixed(1)}</div>`).join("")}</div>
+    </div>`:""}
+  </div>`;
+}
+function renderModCompass(){
+  const ci=WS.checkinFields.length?`
+    <div style="font-size:13px;font-weight:500;margin:0 0 12px;padding-bottom:8px;border-bottom:0.5px solid #e5e5ea">Check-in</div>
+    ${WS.checkinFields.map(f=>`<div style="margin-bottom:1.25rem">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#aeaeb2;margin-bottom:8px">${f.label}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${WS.participants.map(p=>`<div class="card" style="border-left:3px solid ${p.color};padding:10px 12px">
+          <div style="font-size:11px;color:${p.color};font-weight:500;margin-bottom:4px">${p.name}</div>
+          <div style="font-size:13px;color:${state.participants[p.id]?.checkin?.[f.field]?"#1d1d1f":"#aeaeb2"}">${state.participants[p.id]?.checkin?.[f.field]||"–"}</div>
+        </div>`).join("")}
+      </div></div>`).join("")}
+    <div style="font-size:13px;font-weight:500;margin:1.5rem 0 12px;padding-bottom:8px;border-bottom:0.5px solid #e5e5ea">Kompass</div>`:"";
+  return ci+WS.compassFields.map(f=>`<div style="margin-bottom:1.25rem">
+    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#aeaeb2;margin-bottom:8px">${f.label}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${WS.participants.map(p=>`<div class="card" style="border-left:3px solid ${p.color};padding:10px 12px">
+        <div style="font-size:11px;color:${p.color};font-weight:500;margin-bottom:4px">${p.name}</div>
+        <div style="font-size:13px;color:${state.participants[p.id]?.compass?.[f.field]?"#1d1d1f":"#aeaeb2"}">${state.participants[p.id]?.compass?.[f.field]||"–"}</div>
+      </div>`).join("")}
+    </div></div>`).join("");
+}
+let newDimInput="";
+function renderModDimensions(){
+  const dims=state.dimensions;
+  const SUGG=["Entscheidungsgeschwindigkeit","Verbindlichkeit","Transparenz / Infofluss","Ownership / Accountability","Konfliktkultur","Fokus / Priorisierung","Sparring / Challenge","Vertrauen / psych. Sicherheit","Rollenklarheit","Umsetzungsgeschwindigkeit","Meetinghygiene","Eskalationsklarheit"];
+  const unused=SUGG.filter(s=>!dims.includes(s));
+  return`<p style="font-size:13px;color:#6e6e73;margin-bottom:1.25rem">Trage die genannten Punkte ein — max. 10.</p>
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <input type="text" id="dim-input" value="${newDimInput}" oninput="newDimInput=this.value" onkeydown="if(event.key==='Enter')addDim()" placeholder="${dims.length>=10?"Maximum erreicht":"Dimension eingeben..."}" ${dims.length>=10?"disabled":""}>
+      <button class="btn btn-primary btn-sm" onclick="addDim()" ${dims.length>=10?"disabled":""}>+ Hinzufügen</button>
+    </div>
+    <div style="font-size:12px;color:${dims.length===10?"#2EAE85":"#6e6e73"};margin-bottom:1rem">${dims.length}/10${dims.length===10?" ✓":""}</div>
+    ${dims.map((dim,i)=>`<div class="dim-row">
+      <span style="font-size:13px;font-weight:500;color:#aeaeb2;width:20px;text-align:center">${i+1}</span>
+      <span style="flex:1;font-size:14px">${dim}</span>
+      <button onclick="moveDim(${i},-1)" ${i===0?"disabled":""} style="background:none;border:none;cursor:${i===0?"default":"pointer"};color:${i===0?"#aeaeb2":"#6e6e73"};font-size:16px;padding:0 4px">↑</button>
+      <button onclick="moveDim(${i},1)" ${i===dims.length-1?"disabled":""} style="background:none;border:none;cursor:${i===dims.length-1?"default":"pointer"};color:${i===dims.length-1?"#aeaeb2":"#6e6e73"};font-size:16px;padding:0 4px">↓</button>
+      <button onclick="removeDim(${i})" style="background:none;border:none;cursor:pointer;color:#E24B4A;font-size:16px;padding:0 4px">✕</button>
+    </div>`).join("")}
+    ${dims.length<10&&unused.length?`<div style="margin-top:1rem"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#aeaeb2;margin-bottom:8px">Vorschläge</div><div class="suggestion-wrap">${unused.map(s=>`<button class="suggestion-chip" onclick="addDimDirect('${s}')">+ ${s}</button>`).join("")}</div></div>`:""}`;
+}
+function addDim(){const v=(document.getElementById("dim-input")?.value||"").trim();if(!v||state.dimensions.length>=10)return;state.dimensions=[...state.dimensions,v];fbSet("dimensions",state.dimensions);newDimInput="";renderMod();}
+function addDimDirect(s){if(state.dimensions.length>=10)return;state.dimensions=[...state.dimensions,s];fbSet("dimensions",state.dimensions);renderMod();}
+function removeDim(i){state.dimensions.splice(i,1);fbSet("dimensions",state.dimensions);renderMod();}
+function moveDim(i,dir){const d=state.dimensions;const j=i+dir;if(j<0||j>=d.length)return;[d[i],d[j]]=[d[j],d[i]];fbSet("dimensions",d);renderMod();}
+function renderModRating(avg){
+  if(!avg.length)return`<div style="font-size:14px;color:#aeaeb2;padding:1rem">Noch keine Dimensionen.</div>`;
+  return avg.map(({dim,avg})=>{const col=avg>=3.8?"#2EAE85":avg<=2.5?"#E24B4A":"#E8A23A";return`<div style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:6px">
+      <span style="font-size:13px">${dim}</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${WS.participants.map(p=>`<span style="font-size:11px;color:${p.color}">${p.name[0]}:${state.participants[p.id]?.ratings?.[dim]||"–"}</span>`).join("")}
+        <span style="font-size:14px;font-weight:500;color:${col}">${avg?avg.toFixed(1):"–"}</span>
+      </div>
+    </div>
+    <div class="bar-wrap"><div class="bar-fill" style="width:${avg?(avg/5*100)+"%":"0%"};background:${col}"></div></div>
+  </div>`;}).join("");
+}
+function renderModHiLo(hi3,lo3){
+  if(!hi3.length)return`<div style="font-size:14px;color:#aeaeb2;padding:1rem">Noch keine Bewertungen.</div>`;
+  return`<div style="margin-bottom:1.5rem">
+    <div style="font-size:12px;font-weight:500;color:#2EAE85;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">↑ Wo wir stark sind</div>
+    ${hi3.map(({dim,avg})=>`<div class="card" style="border-left:3px solid #2EAE85;display:flex;justify-content:space-between">${dim}<span style="font-size:18px;font-weight:500;color:#2EAE85">${avg.toFixed(1)}</span></div>`).join("")}
+  </div><div>
+    <div style="font-size:12px;font-weight:500;color:#E24B4A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">↓ Wo wir besser werden</div>
+    ${lo3.map(({dim,avg})=>`<div class="card" style="border-left:3px solid #E24B4A;display:flex;justify-content:space-between">${dim}<span style="font-size:18px;font-weight:500;color:#E24B4A">${avg.toFixed(1)}</span></div>`).join("")}
+  </div>`;
+}
+function renderModNotizen(){
+  return WS.noteBlocks.map(b=>{
+    const bn=(state.notes||{})[b.id]||{};
+    return`<div class="card" style="margin-bottom:1.5rem">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:20px">${b.icon}</span>
+        <div style="flex:1"><div style="font-weight:500;font-size:14px">${b.label}</div><div style="font-size:12px;color:#6e6e73">${b.time}</div></div>
+        <button class="btn btn-primary btn-sm" onclick="summarizeBlock('${b.id}','${b.label}')" id="sum-btn-${b.id}">✨ Zusammenfassen</button>
+      </div>
+      ${WS.participants.map(p=>`<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid #e5e5ea">
+        <div style="font-size:11px;color:${p.color};font-weight:500;margin-bottom:3px">${p.name}</div>
+        <div style="font-size:13px;color:${bn[p.id]?"#1d1d1f":"#aeaeb2"}">${bn[p.id]||"Keine Notizen"}</div>
+      </div>`).join("")}
+      ${summaries[b.id]?`<div style="background:#5B8AF512;border:0.5px solid #5B8AF544;border-radius:8px;padding:10px 14px;margin-top:8px"><div style="font-size:11px;color:#5B8AF5;font-weight:500;margin-bottom:6px">✨ KI-Zusammenfassung</div><div style="font-size:13px;white-space:pre-wrap;line-height:1.6">${summaries[b.id]}</div></div>`:""}
+    </div>`;
+  }).join("");
+}
+async function summarizeBlock(blockId,blockLabel){
+  const btn=document.getElementById("sum-btn-"+blockId);
+  if(btn){btn.textContent="⏳ KI...";btn.disabled=true;}
+  const bn=(state.notes||{})[blockId]||{};
+  const allNotes=WS.participants.map(p=>`${p.name}: ${bn[p.id]||"(keine Notizen)"}`).join("\n");
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:`Fasse die Mitschriften zur Session "${blockLabel}" in 3–5 Bullet Points zusammen. Fokus auf Entscheidungen, Key-Insights, nächste Schritte. Auf Deutsch.\n\n${allNotes}`}]})});
+    const json=await res.json();summaries[blockId]=json.content?.[0]?.text||"Keine Antwort";
+  }catch{summaries[blockId]="Fehler.";}
+  renderMod();
+}
+function renderModExport(avg,hi3,lo3){
+  const noteText=WS.noteBlocks.map(b=>`\n${b.label.toUpperCase()}\n${WS.participants.map(p=>`  ${p.name}: ${(state.notes||{})[b.id]?.[p.id]||"–"}`).join("\n")}${summaries[b.id]?`\n  → KI: ${summaries[b.id]}`:""}` ).join("\n");
+  const feverText=`\nFIEBERKURVE\n${MONTHS.map(m=>{const e=state.fever[m.key]||{};return`  ${m.label}: ${WS.participants.map(p=>{const s=e[p.id];return s?p.name[0]+":"+(s.score>0?"+":"")+s.score:"–";}).join(" ")}`;}).join("\n")}`;
+  const text=`BDM WORKSHOP – Tag 1 02.07.\nErgebnisprotokoll · ${new Date().toLocaleDateString("de-DE")}\n${"=".repeat(44)}\n\nTEILNEHMER\n${WS.participants.map(p=>`  ${p.name} (${p.role})`).join("\n")}\n\nKOMPASS\n${WS.participants.map(p=>`\n${p.name}:\n${WS.compassFields.map(f=>`  ${f.label}: ${state.participants[p.id]?.compass?.[f.field]||"–"}`).join("\n")}`).join("\n")}\n\nBEWERTUNG\n${avg.map(({dim,avg})=>`  ${dim.padEnd(34)} ${avg?avg.toFixed(1):"–"}`).join("\n")}\n\nSTÄRKEN:\n${hi3.map(({dim,avg})=>`  ↑ ${dim} (${avg.toFixed(1)})`).join("\n")}\n\nENTWICKLUNG:\n${lo3.map(({dim,avg})=>`  ↓ ${dim} (${avg.toFixed(1)})`).join("\n")}\n\nNOTIZEN\n${noteText}${feverText}`;
+  return`<div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-secondary btn-sm" onclick="copyExport()">Kopieren</button>
+    <button class="btn btn-sm" style="border:0.5px solid #E24B4A44;color:#E24B4A;background:transparent;width:auto;padding:8px 16px;font-size:13px;cursor:pointer" onclick="if(confirm('Wirklich alles zurücksetzen?'))resetAll()">Zurücksetzen</button>
+  </div><pre id="export-text">${text}</pre>`;
+}
+function copyExport(){navigator.clipboard.writeText(document.getElementById("export-text")?.textContent||"").catch(()=>{});}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function isCheckinComplete(d){return WS.checkinFields.every(f=>d.checkin?.[f.field]?.trim().length>0);}
+function isCompassComplete(d){return WS.compassFields.every(f=>d.compass?.[f.field]?.trim().length>0);}
+function isRatingComplete(d){return state.dimensions.length>0&&state.dimensions.every(dim=>(d.ratings?.[dim]||0)>0);}
+
+// ─── PRESENTATION ─────────────────────────────────────────────────────────────
+function buildPresSlides(){
+  const avg=getAvgRatings();
+  const sorted=[...avg].sort((a,b)=>b.avg-a.avg);
+  const hi3=sorted.slice(0,3),lo3=sorted.slice(-3).reverse();
+  presSlides=[
+    ()=>presTitle(),
+    ()=>presFieber(),
+    ...WS.participants.map(p=>()=>presCompass(p)),
+    ()=>presCompassAll(),
+    ...(state.dimensions.length?[()=>presDimensions()]:[]),
+    ...(avg.some(r=>r.avg>0)?[()=>presRatings(avg),()=>presHiLo(hi3,lo3)]:[]),
+    ...WS.noteBlocks.map(b=>()=>presNotes(b)),
+    ()=>presSummary(hi3,lo3),
+  ];
+  presSlide=0;
+}
+function presNav(dir){presSlide=Math.max(0,Math.min(presSlides.length-1,presSlide+dir));renderPresSlide();}
+document.addEventListener("keydown",e=>{
+  if(currentScreen!=="s-pres")return;
+  if(e.key==="ArrowRight"||e.key==="ArrowDown")presNav(1);
+  if(e.key==="ArrowLeft"||e.key==="ArrowUp")presNav(-1);
+  if(e.key==="Escape")setPresMode(false);
+});
+function renderPresSlide(){
+  document.getElementById("pres-slide").innerHTML=presSlides[presSlide]?presSlides[presSlide]():"";
+  document.getElementById("pres-counter").textContent=(presSlide+1)+"/"+presSlides.length;
+  document.getElementById("pres-dots").innerHTML=presSlides.map((_,i)=>`<div class="pres-dot" onclick="presSlide=${i};renderPresSlide()" style="width:${i===presSlide?20:8}px;background:${i===presSlide?"#5B8AF5":"#333"}"></div>`).join("");
+  document.getElementById("pres-prev").style.color=presSlide===0?"#444":"#fff";
+  document.getElementById("pres-next").style.color=presSlide===presSlides.length-1?"#444":"#fff";
+  if(presSlides[presSlide]?.toString().includes("presFieber"))setTimeout(drawPresChart,50);
+}
+function pc(color,title,content){return`<div style="background:#1a1d27;border:0.5px solid #2a2d3a;border-left:3px solid ${color};border-radius:10px;padding:1rem 1.25rem"><div style="font-size:10px;color:${color};font-weight:500;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">${title}</div>${content}</div>`;}
+function presTitle(){return`<div><div style="width:40px;height:3px;background:#5B8AF5;margin-bottom:2rem"></div><h1 style="font-size:36px;font-weight:500;margin:0 0 10px;color:#fff">BDM Workshop</h1><p style="font-size:18px;color:#5B8AF5;margin:0 0 2rem">Tag 1 – 02.07.</p><p style="font-size:13px;color:#555">${WS.participants.map(p=>`${p.name} (${p.role})`).join(" · ")}</p></div>`;}
+function presCompass(p){const c=state.participants[p.id]?.compass||{};return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Mein Kompass</div><h2 style="font-size:26px;font-weight:500;color:#fff;margin:0 0 1.5rem">${p.name} <span style="color:#555;font-weight:400">· ${p.role}</span></h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${WS.compassFields.map(f=>pc(p.color,f.label,`<div style="font-size:14px;color:${c[f.field]?"#fff":"#444"}">${c[f.field]||"–"}</div>`)).join("")}</div></div>`;}
+function presCompassAll(){return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Alle Kompasse</div><h2 style="font-size:26px;font-weight:500;margin:0 0 1.5rem;color:#fff">Was uns antreibt</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${WS.participants.map(p=>pc(p.color,p.name+" · "+p.role,`<div style="font-size:12px;color:#aaa">${state.participants[p.id]?.compass?.motiviert||"–"}</div>`)).join("")}</div></div>`;}
+function presDimensions(){return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Zusammenarbeit</div><h2 style="font-size:26px;font-weight:500;margin:0 0 1.5rem;color:#fff">Unsere Dimensionen</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${state.dimensions.map((dim,i)=>`<div style="background:#1a1d27;border:0.5px solid #2a2d3a;border-radius:10px;padding:12px 16px;display:flex;gap:12px;align-items:center"><span style="font-size:18px;font-weight:500;color:#5B8AF5;width:28px">${i+1}</span><span style="font-size:14px;color:#fff">${dim}</span></div>`).join("")}</div></div>`;}
+function presRatings(avg){return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Ergebnis</div><h2 style="font-size:26px;font-weight:500;margin:0 0 1.5rem;color:#fff">Bewertung</h2>${avg.map(({dim,avg})=>{const col=avg>=3.8?"#2EAE85":avg<=2.5?"#E24B4A":"#E8A23A";return`<div style="margin-bottom:10px;display:flex;align-items:center;gap:12px"><div style="width:220px;font-size:13px;color:#ccc;flex-shrink:0">${dim}</div><div style="flex:1;height:8px;background:#2a2d3a;border-radius:4px"><div style="height:100%;width:${avg?(avg/5*100)+"%":"0%"};background:${col};border-radius:4px"></div></div><div style="width:30px;text-align:right;font-size:14px;font-weight:500;color:${col}">${avg?avg.toFixed(1):"–"}</div></div>`;}).join("")}</div>`;}
+function presHiLo(hi3,lo3){return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Stärken & Entwicklung</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem"><div><h3 style="font-size:16px;color:#2EAE85;margin:0 0 1rem;font-weight:500">↑ Stark</h3>${hi3.map(({dim,avg})=>`<div style="background:#1a1d27;border:0.5px solid #2a2d3a;border-left:3px solid #2EAE85;border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;color:#fff"><span style="font-size:13px">${dim}</span><span style="font-size:16px;font-weight:500;color:#2EAE85">${avg.toFixed(1)}</span></div>`).join("")}</div><div><h3 style="font-size:16px;color:#E24B4A;margin:0 0 1rem;font-weight:500">↓ Entwicklung</h3>${lo3.map(({dim,avg})=>`<div style="background:#1a1d27;border:0.5px solid #2a2d3a;border-left:3px solid #E24B4A;border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;color:#fff"><span style="font-size:13px">${dim}</span><span style="font-size:16px;font-weight:500;color:#E24B4A">${avg.toFixed(1)}</span></div>`).join("")}</div></div></div>`;}
+function presNotes(block){const bn=(state.notes||{})[block.id]||{};const sum=summaries[block.id];return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">${block.time} · ${block.moderator}</div><h2 style="font-size:26px;font-weight:500;margin:0 0 1.5rem;color:#fff">${block.icon} ${block.label}</h2>${sum?pc("#5B8AF5","✨ Zusammenfassung",`<div style="font-size:14px;color:#ddd;white-space:pre-wrap;line-height:1.6">${sum}</div>`):`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${WS.participants.map(p=>pc(p.color,p.name,`<div style="font-size:13px;color:${bn[p.id]?"#ddd":"#444"}">${bn[p.id]||"–"}</div>`)).join("")}</div>`}</div>`;}
+
+function presFieber(){
+  return`<div style="height:100%">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Team-Fieberkurve</div>
+    <h2 style="font-size:26px;font-weight:500;margin:0 0 1.5rem;color:#fff">12 Monate Zusammenarbeit</h2>
+    <canvas id="pres-chart" style="width:100%;max-height:300px"></canvas>
+  </div>`;}
+
+function drawPresChart(){
+  const canvas=document.getElementById("pres-chart");
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||800;
+  const H=300;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+"px";canvas.style.height=H+"px";
+  const ctx=canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  const fever=state.fever||{};
+  const pad={top:20,right:20,bottom:50,left:45};
+  const cw=W-pad.left-pad.right;
+  const ch=H-pad.top-pad.bottom;
+  const n=MONTHS.length;
+  ctx.strokeStyle="#2a2d3a";ctx.lineWidth=0.5;
+  [-3,-2,-1,0,1,2,3].forEach(v=>{
+    const y=pad.top+ch*(1-(v+3)/6);
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cw,y);ctx.stroke();
+    ctx.fillStyle=v===0?"#888":"#444";ctx.font="11px -apple-system,sans-serif";
+    ctx.textAlign="right";ctx.fillText(v>0?"+"+v:v,pad.left-8,y+4);
+  });
+  const y0=pad.top+ch*0.5;
+  ctx.strokeStyle="#444";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(pad.left,y0);ctx.lineTo(pad.left+cw,y0);ctx.stroke();
+  ctx.fillStyle="#555";ctx.font="10px -apple-system,sans-serif";ctx.textAlign="center";
+  MONTHS.forEach((m,i)=>{
+    const x=pad.left+i*(cw/(n-1));
+    ctx.fillText(m.label.replace(" ","'\n"),x,H-pad.bottom+16);
+  });
+  WS.participants.forEach(p=>{
+    const points=MONTHS.map((m,i)=>{const e=(fever[m.key]||{})[p.id];if(!e||e.score==null)return null;return{x:pad.left+i*(cw/(n-1)),y:pad.top+ch*(1-(e.score+3)/6)};});
+    ctx.strokeStyle=p.color;ctx.lineWidth=2.5;ctx.lineJoin="round";
+    let drawing=false;
+    points.forEach(pt=>{if(!pt){drawing=false;return;}if(!drawing){ctx.beginPath();ctx.moveTo(pt.x,pt.y);drawing=true;}else ctx.lineTo(pt.x,pt.y);});
+    ctx.stroke();
+    points.forEach(pt=>{if(!pt)return;ctx.beginPath();ctx.arc(pt.x,pt.y,5,0,Math.PI*2);ctx.fillStyle=p.color;ctx.fill();ctx.strokeStyle="#0f1117";ctx.lineWidth=2;ctx.stroke();});
+  });
+  let lx=pad.left;
+  WS.participants.forEach(p=>{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(lx+6,H-12,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#aaa";ctx.font="11px -apple-system,sans-serif";ctx.textAlign="left";ctx.fillText(p.name,lx+15,H-8);lx+=80;});
+}
+
+function presSummary(hi3,lo3){return`<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#5B8AF5;margin-bottom:1rem">Zusammenfassung</div><h2 style="font-size:26px;font-weight:500;margin:0 0 1.5rem;color:#fff">Key Takeaways</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${pc("#2EAE85","↑ Stark",hi3.map(({dim,avg})=>`<div style="font-size:13px;color:#2EAE85;margin-bottom:4px">↑ ${dim} · ${avg.toFixed(1)}</div>`).join(""))}${pc("#E24B4A","↓ Entwicklung",lo3.map(({dim,avg})=>`<div style="font-size:13px;color:#E24B4A;margin-bottom:4px">↓ ${dim} · ${avg.toFixed(1)}</div>`).join(""))}</div></div>`;}
+</script>
+</body>
+</html>
